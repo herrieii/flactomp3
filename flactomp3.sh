@@ -1,6 +1,6 @@
 #!/bin/bash
 # flactomp3.sh
-# Convert FLAC files to MP3 using ffmpeg
+# A shell script that converts FLAC files to MP3 using FFmpeg
 
 echo "FLAC to MP3 0.1"
 
