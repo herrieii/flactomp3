@@ -2,7 +2,7 @@
 # flactomp3.sh
 # A shell script that converts FLAC files to MP3 using FFmpeg
 
-version="0.2"
+version="0.3"
 
 echo "FLAC to MP3 $version"
 
@@ -20,14 +20,39 @@ then
   exit
 fi
 
+workingDir="$PWD"
+
 cd "$1"
+targetDir="$PWD"
+cd "$workingDir"
+
+if [ $# -eq 1 ]
+then
+  echo "No second path given. Using target directory as destination direcory."
+
+  destDir=$targetDir
+else
+  if [ ! -d "$2" ]
+  then
+    echo "No such directory. Please check the path of the destination directory you tried to enter."
+    exit
+  fi
+
+  cd "$2"
+  destDir="$PWD"
+  cd "$workingDir"
+fi
 
 echo "Target directory:"
-echo "  $PWD"
+echo "  $targetDir"
 
-total=`ls *.flac 2> /dev/null | wc -l | bc`  # bc trims whitespace
+echo "Destination directory:"
+echo "  $destDir"
 
-if [ $total -eq 0 ]
+cd "$targetDir"
+sourceCount=`ls *.flac 2> /dev/null | wc -l | bc`  # bc trims whitespace
+
+if [ $sourceCount -eq 0 ]
 then
   echo "No FLAC files found. Please check the directory you entered."
   exit
@@ -43,12 +68,28 @@ then
   exit
 fi
 
+if [ "$destDir" != "$targetDir" ]
+then
+  newDir="${PWD##*/}"
+  echo -n "New directory name: [`echo $newDir`] "
+  read answer
+  if [ ! -z "$answer" ]
+  then
+    newDir=`echo "$answer"`  # trim
+  fi
+
+  destDir="$destDir/$newDir"
+  mkdir "$destDir"
+fi
+
+cd "$targetDir"
+
 let count=0
 
 for file in *.flac
 do
   # Convert FLAC to MP3 VBR V0 and copy ID3 tags
-  ffmpeg -i "$file" -aq 0 -map_metadata 0 "`basename "$file" .flac`.mp3"
+  ffmpeg -i "$file" -aq 0 -map_metadata 0 "$destDir/`basename "$file" .flac`.mp3"
   # Count convert if ffmpeg returned exit code 0
   if [ $? -eq 0 ]
   then
@@ -56,12 +97,15 @@ do
   fi
 done
 
-echo "$count out of $total files converted successfully."
+echo "$count out of $sourceCount files converted."
 
-echo -n "Do you want to delete all source files? (This can NOT be undone!) [y/N] "
-read answer
-if echo "$answer" | grep -iq ^y
+if [ "$destDir" = "$targetDir" ]
 then
-  rm -v *.flac
-  echo "Source files deleted."
+  echo -n "Do you want to delete all source files? (This can NOT be undone!) [y/N] "
+  read answer
+  if echo "$answer" | grep -iq ^y
+  then
+    rm -v *.flac
+    echo "Source files deleted."
+  fi
 fi

@@ -18,12 +18,10 @@ source ~/.bashrc
 
 ## Usage
 
-Enter the target directory and execute the script:
+Enter the target and destination directory and execute the script:
 
 ```
-flactomp3 Music/Kanye\ West\ -\ Graduation
+flactomp3 Music/Kanye\ West\ -\ Graduation /media/audiodevice
 ```
 
-Then follow the instructions.
-
-The destination files are placed in the target directory.
+Follow the instructions.
