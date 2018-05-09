@@ -1,37 +1,39 @@
 #!/bin/bash
-# flactomp3.sh
-# A shell script that converts FLAC files to MP3 using FFmpeg
+# flactomp3.sh - A shell script that provides a simple interface for converting FLAC files to MP3 using FFmpeg
 
-version="0.3"
+version="0.4"
 
 echo "FLAC to MP3 $version"
 
+# MP3 quality level, see http://wiki.hydrogenaud.io/index.php?title=Recommended_LAME#Recommended_settings_details
+quality=0
+
 if [ $# -eq 0 ]
 then
-  echo "No path given. Please enter the directory containing the files you wish to convert."
-  echo "Example":
-  echo "  `echo "$0" | sed "s|^$HOME|~|"` ~/Music/Kanye\ West\ -\ Graduation"
+  echo "No path given. Please enter the directory containing the files you wish to convert. Enter a second directory to create a new destination directory."
+  echo "Example:"
+  echo "  `echo "$0" | sed "s|^$HOME|~|"` ~/Music/Kanye\ West\ -\ Graduation /media/audiodevice"
   exit
 fi
 
 if [ ! -d "$1" ]
 then
-  echo "No such directory. Please check the path of the directory you tried to enter."
+  echo "No such directory. Please check the path of the source directory you tried to enter."
   exit
 fi
 
-workingDir="$PWD"
+workDir="$PWD"
 
 cd "$1"
-targetDir="$PWD"
-cd "$workingDir"
+sourceDir="$PWD"
 
 if [ $# -eq 1 ]
 then
-  echo "No second path given. Using target directory as destination direcory."
+  echo "No second path given. Using the source directory as the destination direcory."
 
-  destDir=$targetDir
+  destDir=$sourceDir
 else
+  cd "$workDir"
   if [ ! -d "$2" ]
   then
     echo "No such directory. Please check the path of the destination directory you tried to enter."
@@ -40,21 +42,20 @@ else
 
   cd "$2"
   destDir="$PWD"
-  cd "$workingDir"
 fi
 
-echo "Target directory:"
-echo "  $targetDir"
+echo "Source directory:"
+echo "  $sourceDir"
 
 echo "Destination directory:"
 echo "  $destDir"
 
-cd "$targetDir"
+cd "$sourceDir"
 sourceCount=`ls *.flac 2> /dev/null | wc -l | bc`  # bc trims whitespace
 
 if [ $sourceCount -eq 0 ]
 then
-  echo "No FLAC files found. Please check the directory you entered."
+  echo "No FLAC files found. Please check the source directory you entered."
   exit
 fi
 
@@ -62,48 +63,44 @@ echo "Source files:"
 ls -1 *.flac | sed 's/^/  /'  # print one file per line and indent
 
 echo -n "Do you want to convert these files? [Y/n] "
-read answer
-if echo "$answer" | grep -iq ^n  # echo trims whitespace
+read a
+if echo "$a" | grep -iq ^n  # echo trims whitespace
 then
   exit
 fi
 
-if [ "$destDir" != "$targetDir" ]
+if [ "$destDir" != "$sourceDir" ]
 then
   newDir="${PWD##*/}"
-  echo -n "New directory name: [`echo $newDir`] "
-  read answer
-  if [ ! -z "$answer" ]
+  echo -n "New directory name: [$newDir] "
+  read a
+  if [ ! -z "$a" ]
   then
-    newDir=`echo "$answer"`  # trim
+    newDir=`echo "$a"`  # trim
   fi
 
   destDir="$destDir/$newDir"
-  mkdir "$destDir"
+  mkdir -v "$destDir"
 fi
 
-cd "$targetDir"
-
-let count=0
-
-for file in *.flac
+for f in *.flac
 do
-  # Convert FLAC to MP3 VBR V0 and copy ID3 tags
-  ffmpeg -i "$file" -aq 0 -map_metadata 0 "$destDir/`basename "$file" .flac`.mp3"
-  # Count convert if ffmpeg returned exit code 0
+  # Convert FLAC to MP3 and copy ID3 tags
+  ffmpeg -i "$f" -aq "$quality" -map_metadata 0 "$destDir/`basename "$f" .flac`.mp3"
+  # Count convert if FFmpeg returned exit code 0
   if [ $? -eq 0 ]
   then
-    let count=count+1
+    let c=c+1
   fi
 done
 
-echo "$count out of $sourceCount files converted."
+echo "$c out of $sourceCount files converted."
 
-if [ "$destDir" = "$targetDir" ]
+if [ "$sourceDir" = "$destDir" ]
 then
-  echo -n "Do you want to delete all source files? (This can NOT be undone!) [y/N] "
-  read answer
-  if echo "$answer" | grep -iq ^y
+  echo -n "Do you want to permanently delete all source files? (WARNING: This can NOT be undone!) [y/N] "
+  read a
+  if echo "$a" | grep -iq ^y
   then
     rm -v *.flac
     echo "Source files deleted."
